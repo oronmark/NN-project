@@ -1,0 +1,3 @@
+euclidian: vector1, MNIST
+
+

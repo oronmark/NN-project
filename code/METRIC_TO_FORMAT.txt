@@ -1,0 +1,3 @@
+euclidian: vector1, vector2, MNIST
+bulgarian: vector3, vector4
+
