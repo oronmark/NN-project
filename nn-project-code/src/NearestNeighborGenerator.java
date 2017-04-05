@@ -149,10 +149,10 @@ public class NearestNeighborGenerator {
 		bw.write("Test set size, " + db.getTestSetSize() + "\n");
 		
 		if (isLimitLabels){
-			bw.write("Labels to consider when assignning labels to gamma net " + labelsToConsider + "\n");
+			bw.write("Labels to consider when assignning labels to gamma net, " + labelsToConsider + "\n");
 		}
 		else{
-			bw.write("Labels to consider when assignning labels to gamma net " + "all" + "\n");
+			bw.write("Labels to consider when assignning labels to gamma net, " + "all" + "\n");
 		}
 		
 		bw.write("\n");
