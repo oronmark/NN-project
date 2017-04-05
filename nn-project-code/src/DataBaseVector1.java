@@ -5,9 +5,9 @@ import java.util.regex.Pattern;
 
 public class DataBaseVector1 extends DataBase<double[]> {
 
-	public DataBaseVector1(String trainingSetFilePath, String metricType, double _delta  ,boolean _isUserScale, double _userScale, double _divisor)
-			throws FileNotFoundException {
-		super(trainingSetFilePath, metricType, _delta , _isUserScale, _userScale, _divisor);
+	public DataBaseVector1(String trainingSetFilePath, String metricType, double _delta ,boolean _isUserScale, double _userScale, double _divisor
+            , boolean _isLimitLables, int _labelsToConsider) throws FileNotFoundException {
+				super(trainingSetFilePath, metricType, _delta, _isUserScale ,_userScale, _divisor,_isLimitLables , _labelsToConsider);
 	}
 
 	@Override

@@ -26,7 +26,6 @@ public class NearestNeighborGenerator {
 		 * not mendatory:
 		 * -s <scale> : scale user input (if user scale was not provided, the scale will be calculated)
 		 * -d <divisor> : divisor user input (default - 2)
-		 * -o <outputFilePath> (default - stdout)
 		 * -l <lebelNumber> : number of labels to consider when assigning lebels to gamma net points 
 		 */
 		
@@ -39,7 +38,7 @@ public class NearestNeighborGenerator {
 		double divisor = 2;
 	    boolean isUserScale = false;
 		double userScale = 0;
-		int lebelsToConsider = 0;
+		int labelsToConsider = 0;
 		boolean isLimitLabels = false;
 		
 		for (int i=5;i<args.length;i++){
@@ -71,15 +70,15 @@ public class NearestNeighborGenerator {
 			}
 			if (args[i].equals("-l")){
 				try{
-					lebelsToConsider = Integer.parseInt(args[i+1]);
-					isLimitLabels = false;
-					if (lebelsToConsider<=0){
+					labelsToConsider = Integer.parseInt(args[i+1]);
+					isLimitLabels = true;
+					if (labelsToConsider<=0){
 						System.out.println("Error: number of lebels to consider must be greater then 0");
 						return;
 					}
 				}
 				catch(NumberFormatException nfe){
-					System.out.println("Error: divisor input is not of type double");
+					System.out.println("Error: number of labels to concider is not of type Integer");
 					return;
 				}
 			}
@@ -102,11 +101,18 @@ public class NearestNeighborGenerator {
 			
 		}
 		
-	
-		final HashMultiMap map = new HashMultiMap("METRIC_TO_FORMAT.txt");
+	    HashMultiMap map = null;
+		try{	
+			map = new HashMultiMap("METRIC_TO_FORMAT.txt");
+		}
+		catch(FileNotFoundException e){
+			System.out.println("Error: Please palce to file METRIC_TO_FORMAT.txt in the folder nn-project-code");
+			return;
+			
+		}
 		
 		
-		DataBase db = makeDataBase(trainingSetFilePath, isUserScale, userScale, map, dataType, metricType, delta, divisor);
+		DataBase db = makeDataBase(trainingSetFilePath, isUserScale, userScale, map, dataType, metricType, delta, divisor, isLimitLabels, labelsToConsider);
 		if (db == null){
 			return;
 		}
@@ -141,6 +147,14 @@ public class NearestNeighborGenerator {
 		bw.write("Training set size, " + db.getTrainingSetSize() + "\n");
 		bw.write("Gamma net size, " + db.getGammaNetSize() + "\n");
 		bw.write("Test set size, " + db.getTestSetSize() + "\n");
+		
+		if (isLimitLabels){
+			bw.write("Labels to consider when assignning labels to gamma net " + labelsToConsider + "\n");
+		}
+		else{
+			bw.write("Labels to consider when assignning labels to gamma net " + "all" + "\n");
+		}
+		
 		bw.write("\n");
 		bw.write("\n");
 		cm.exportToFile(bw);
@@ -161,7 +175,7 @@ public class NearestNeighborGenerator {
 	
 	
 	public static DataBase makeDataBase(String trainingSetFilePath, boolean isUserScale, double userScale, HashMultiMap map, String dataType, 
-			                            String metricType, double delta, double divisor){
+			                            String metricType, double delta, double divisor, boolean isLimitLabels, int labelsToConsider){
 		
 		DataBase db = null;
 		
@@ -180,7 +194,7 @@ public class NearestNeighborGenerator {
 			switch (dataType){
 				case "vector1" :
 				try {
-					db = new DataBaseVector1(trainingSetFilePath, metricType, delta, isUserScale, userScale, divisor);
+					db = new DataBaseVector1(trainingSetFilePath, metricType, delta, isUserScale, userScale, divisor , isLimitLabels, labelsToConsider);
 				} catch (FileNotFoundException e) {
 					System.err.println("Error: Training set file " + trainingSetFilePath + " not found");
 					return null;
@@ -188,7 +202,7 @@ public class NearestNeighborGenerator {
 					break;
 				case "MNIST" :
 				try {
-					db = new DataBaseMnist(trainingSetFilePath, metricType, delta, isUserScale, userScale, divisor);
+					db = new DataBaseMnist(trainingSetFilePath, metricType, delta, isUserScale, userScale, divisor ,  isLimitLabels, labelsToConsider);
 				} catch (FileNotFoundException e) {
 					System.err.println("Error: Training set file " + trainingSetFilePath + " not found");
 					return null;

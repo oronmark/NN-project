@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 // maps a metric type to an array of formats the metric can accept
 public class HashMultiMap {
 	private HashMap<String, ArrayList<String>> metricToFormat = new HashMap<String, ArrayList<String>>();
-	public HashMultiMap(String filePath){
+	public HashMultiMap(String filePath) throws FileNotFoundException{
 		final String REGEX_DATABASE = "[a-zA-Z0-9]+";
 		final Pattern pattern1  = Pattern.compile(REGEX_DATABASE);
 		try {
@@ -30,8 +30,7 @@ public class HashMultiMap {
 			}
 			s.close();
 			} catch (FileNotFoundException e) {
-			System.out.println("asdasdasd");
-			e.printStackTrace();
+			    throw e;
 			}
 		
 		}
