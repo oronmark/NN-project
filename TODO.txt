@@ -1,0 +1,6 @@
+1- count number of different examples the algorithm asks for labels.
+2- add optional user input which limits the number of lables the makeGammaNet function consider when assigning a label to a gamma net element. (done)
+3- add prints for alpha (which sivan added). (done)
+4- in makeClassifier, claculate alpha ones ine calcPenalty.
+5- add new form of penalty and an optional user input to for picking a penalty (details in sivan's email).
+6- add casting to alpha calculation. (done)
