@@ -19,6 +19,7 @@ public abstract class DataBase<T> {
 	 * sizeOfTrainingSet
 	 * sizeOfGammaNet
 	 * scale : the scale which is used to build the gamma net
+	 * globalLabelToCountArray :  globalLabelToCountArray[i] is the count of labels counted for the majority decision for gammaNetPoints[i]
 	 */
 	T[] testSetPoints;
 	protected double[] testSetLabels;
@@ -26,6 +27,7 @@ public abstract class DataBase<T> {
 	protected double[] trainingSetLabels;
 	protected ArrayList<T> gammaNetPoints;
 	protected double[] gammaNetLabels;
+	protected int[] cellSize; //cellSize[i] is the number of points in gammaNetPoints[i]'s cell
 	Metric<T> metric;
 	int dimTrainingSet;
 	int dimTestSet;
@@ -41,9 +43,11 @@ public abstract class DataBase<T> {
 	double divisor;
 	boolean isLimitLabels = false;
 	int labelsToConsider = 0;
+	int penaltySize;
+	
 	
 	public DataBase (String trainingSetFilePath, String metricType, double _delta, boolean _isUserScale, double _userScale, double _divisor ,
-			         boolean _isLimitLabels, int _labelsToConsider) throws FileNotFoundException{
+			         boolean _isLimitLabels, int _labelsToConsider, int _penaltyType) throws FileNotFoundException{
 		
 		   /**
 		   * This method is the constructor for dataBaseType1
@@ -58,6 +62,7 @@ public abstract class DataBase<T> {
 		isUserScale = _isUserScale;
 		userScale = _userScale;
 		this.delta = _delta; 
+		penaltySize = _penaltyType;
 		makeTrainingSet(trainingSetFilePath);	
 		shuffleTrainSet();
 		makeMetric(metricType);
@@ -106,6 +111,7 @@ public abstract class DataBase<T> {
 	    }
 				
 	}
+
 
 	double[] classify(T[] dataSetPoints , int dataSetSize){
 		
@@ -284,14 +290,60 @@ public abstract class DataBase<T> {
 		return error;
 	}
 	
-	
+	// will be used only on training set
+	// originalLabels = training set labels
 	double calcClassifierLooError(double[] originalLabels, double[] assignedLabels){
 		
+		double dis;
+		int closestGammaPointIndex;
+		double error = 0;
+		int indexInGammaNet;
+		for (int i = 0; i < trainingSetPoints.length; i++){
+			if (((indexInGammaNet=checkIfGammaNetElem(trainingSetPoints[i])) == -1) || cellSize[indexInGammaNet] == 1){
+				if (originalLabels[i] != assignedLabels[i]){
+					error++;
+				}
+			}
+			else{ //special case for gamma net points with cellSize = 1
+				
+				dis = metric.calcDistance(gammaNetPoints.get(indexInGammaNet), gammaNetPoints.get(0));
+				closestGammaPointIndex = 0;
+				for (int j = 0 ; j<gammaNetPoints.size() ; j++){
+					if (metric.calcDistance(gammaNetPoints.get(indexInGammaNet), gammaNetPoints.get(i))<dis){
+						dis = metric.calcDistance(gammaNetPoints.get(indexInGammaNet), gammaNetPoints.get(i));
+						closestGammaPointIndex = j;
+					}
+				}
+				
+				
+				if (assignedLabels[i] != gammaNetLabels[closestGammaPointIndex]){
+					error++;
+				}
+				
+			}
+			
+		}
 		
-		
-		return 0;
+		error = error / originalLabels.length;		
+		return error;
+
 	}
 	
+	//checks whether elem is a gammaNet element, if so, returns the index of this element in the structure gammaNetPoints otherwise returns -1
+	int checkIfGammaNetElem(T elem){
+		
+
+		for (int i = 0; i<gammaNetPoints.size(); i++){
+			if (elem == gammaNetPoints.get(i)){  //compares addresses 
+				return i;
+			}
+		}
+		
+		return -1;
+	}
+	
+	
+
 	
 	
 	double getMaxDistance(){
@@ -406,6 +458,7 @@ public abstract class DataBase<T> {
 		boolean gammaElem = true;
 		Map<Double,Integer> lableToCount;
 		ArrayList<Map<Double,Integer>> labelToCountArray = new ArrayList<Map<Double,Integer>>(); //extension of tmpPoints
+//		ArrayList<Map<Double,Integer>> globalGabelToCountArray = new ArrayList<Map<Double,Integer>>(); //extension of tmpPoints
 		ArrayList<Integer> countOfTotalLabels = new ArrayList<Integer>(); //extension of tmpPoints
 		double minDistanceFromGammaPoint;
 		double currDistance;
@@ -496,6 +549,7 @@ public abstract class DataBase<T> {
 	//	create gammaNet arrays
 		gammaNetPoints = new ArrayList<T>(tmpPoints.size());
 		gammaNetLabels = new double[tmpPoints.size()];
+		cellSize = new int[tmpPoints.size()];
 		for (int i=0; i < tmpPoints.size(); i++){
 			gammaNetPoints.add(tmpPoints.get(i));
 			if ( tmpLables.get(i) == null){
@@ -504,8 +558,12 @@ public abstract class DataBase<T> {
 			else{
 				gammaNetLabels[i] = tmpLables.get(i);
 			}
+			cellSize[i] = countOfTotalLabels.get(i);
 			
 		}	
+		
+
+		
 }
 	
 	

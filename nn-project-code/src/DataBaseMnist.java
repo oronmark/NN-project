@@ -13,8 +13,8 @@ import java.util.regex.Pattern;
  */
 public class DataBaseMnist extends DataBase<double[]> {
 	public DataBaseMnist(String trainingSetFilePath, String metricType, double _delta ,boolean _isUserScale, double _userScale, double _divisor
-			             , boolean _isLimitLables, int _labelsToConsider) throws FileNotFoundException {
-		super(trainingSetFilePath, metricType, _delta, _isUserScale ,_userScale, _divisor,_isLimitLables , _labelsToConsider);
+			             , boolean _isLimitLables, int _labelsToConsider, int _penaltyType) throws FileNotFoundException {
+		super(trainingSetFilePath, metricType, _delta, _isUserScale ,_userScale, _divisor,_isLimitLables , _labelsToConsider, _penaltyType);
 	}
 
 

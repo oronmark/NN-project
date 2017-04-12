@@ -27,6 +27,7 @@ public class NearestNeighborGenerator {
 		 * -s <scale> : scale user input (if user scale was not provided, the scale will be calculated)
 		 * -d <divisor> : divisor user input (default - 2)
 		 * -l <lebelNumber> : number of labels to consider when assigning lebels to gamma net points 
+		 * -p <penalty> : which penalty formula will be used, defualt = 1
 		 */
 		
 		
@@ -40,6 +41,8 @@ public class NearestNeighborGenerator {
 		double userScale = 0;
 		int labelsToConsider = 0;
 		boolean isLimitLabels = false;
+		int penaltyType = 1;
+		int penaltyOptions = 2;
 		
 		if (args.length<5){
 			
@@ -89,6 +92,20 @@ public class NearestNeighborGenerator {
 				}
 			}
 			
+			if (args[i].equals("-p")){
+				try{
+					penaltyType = Integer.parseInt(args[i+1]);
+					if (penaltyType<penaltyOptions || penaltyType>penaltyOptions){
+						System.out.println("Error: The penalty type you entered does not exist");
+						return;
+					}
+				}
+				catch(NumberFormatException nfe){
+					System.out.println("Error: penalty type is not of type Integer");
+					return;
+				}
+			}
+			
 		}
 		
 		if (args.length<5){
@@ -118,7 +135,8 @@ public class NearestNeighborGenerator {
 		}
 		
 		
-		DataBase db = makeDataBase(trainingSetFilePath, isUserScale, userScale, map, dataType, metricType, delta, divisor, isLimitLabels, labelsToConsider);
+		DataBase db = makeDataBase(trainingSetFilePath, isUserScale, userScale, map, dataType, metricType, delta, divisor,
+									isLimitLabels, labelsToConsider, penaltyType);
 		if (db == null){
 			return;
 		}
@@ -181,7 +199,7 @@ public class NearestNeighborGenerator {
 	
 	
 	public static DataBase makeDataBase(String trainingSetFilePath, boolean isUserScale, double userScale, HashMultiMap map, String dataType, 
-			                            String metricType, double delta, double divisor, boolean isLimitLabels, int labelsToConsider){
+			                            String metricType, double delta, double divisor, boolean isLimitLabels, int labelsToConsider, int penaltyType){
 		
 		DataBase db = null;
 		
@@ -200,7 +218,7 @@ public class NearestNeighborGenerator {
 			switch (dataType){
 				case "vector1" :
 				try {
-					db = new DataBaseVector1(trainingSetFilePath, metricType, delta, isUserScale, userScale, divisor , isLimitLabels, labelsToConsider);
+					db = new DataBaseVector1(trainingSetFilePath, metricType, delta, isUserScale, userScale, divisor , isLimitLabels, labelsToConsider, penaltyType);
 				} catch (FileNotFoundException e) {
 					System.err.println("Error: Training set file " + trainingSetFilePath + " not found");
 					return null;
@@ -208,7 +226,7 @@ public class NearestNeighborGenerator {
 					break;
 				case "MNIST" :
 				try {
-					db = new DataBaseMnist(trainingSetFilePath, metricType, delta, isUserScale, userScale, divisor ,  isLimitLabels, labelsToConsider);
+					db = new DataBaseMnist(trainingSetFilePath, metricType, delta, isUserScale, userScale, divisor ,  isLimitLabels, labelsToConsider, penaltyType);
 				} catch (FileNotFoundException e) {
 					System.err.println("Error: Training set file " + trainingSetFilePath + " not found");
 					return null;
