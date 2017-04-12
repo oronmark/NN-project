@@ -41,6 +41,12 @@ public class NearestNeighborGenerator {
 		int labelsToConsider = 0;
 		boolean isLimitLabels = false;
 		
+		if (args.length<5){
+			
+			System.out.println("Error: incorrect number of mandatory arguments");
+			return;
+		}
+		
 		for (int i=5;i<args.length;i++){
 			
 			if (args[i].equals("-s")){

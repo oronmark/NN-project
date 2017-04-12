@@ -284,6 +284,16 @@ public abstract class DataBase<T> {
 		return error;
 	}
 	
+	
+	double calcClassifierLooError(double[] originalLabels, double[] assignedLabels){
+		
+		
+		
+		return 0;
+	}
+	
+	
+	
 	double getMaxDistance(){
 		
 		/**
@@ -383,16 +393,20 @@ public abstract class DataBase<T> {
 	 * information regarding the method variables:
 	 * tmpPoint : temporary array for the gamma net elements
 	 * tmpLabels : labels for tmpPoins elements
+	 * labelToCountArray: labelToCountArray[i] is the mapping of all the labels in tmpPoint[i]'s cell to there count 
+	 * countOfTotalLabels: countOfTotalLabels[i] is the count of labels counted for the majority decision for tmpPoint[i]
 	 * restPoints : temporary array for all of the elements of the training set
 	 * restLabels: labels for restPoint elements
+	 * 
 	*/
 		ArrayList<T> tmpPoints = new ArrayList<T>();
-		ArrayList<Double> tmpLables = new ArrayList<Double>();
+		ArrayList<Double> tmpLables = new ArrayList<Double>(); //extension of tmpPoints
 		ArrayList<T> restPoints = new ArrayList<T>();
 		ArrayList<Double> restLables = new ArrayList<Double>();
 		boolean gammaElem = true;
 		Map<Double,Integer> lableToCount;
-		ArrayList<Map<Double,Integer>> labelToCountArray = new ArrayList<Map<Double,Integer>>();;
+		ArrayList<Map<Double,Integer>> labelToCountArray = new ArrayList<Map<Double,Integer>>(); //extension of tmpPoints
+		ArrayList<Integer> countOfTotalLabels = new ArrayList<Integer>(); //extension of tmpPoints
 		double minDistanceFromGammaPoint;
 		double currDistance;
 		int minDistanceFromGammaPointIndex;
@@ -413,7 +427,8 @@ public abstract class DataBase<T> {
 				labelToCountArray.add(new HashMap<Double,Integer>());
 				sizeOfGammaNet++;
 			}
-
+			
+			countOfTotalLabels.add(0);
 			restPoints.add(trainingSetPoints[i]);
 			restLables.add(trainingSetLabels[i]);
 			gammaElem = true;
@@ -421,7 +436,8 @@ public abstract class DataBase<T> {
 		}
 				
 		//sets labels for gammaNet elements
-		
+		// resTPoints = all of the training set elements
+		// tmpPoints = gammaNet elements
 		//create label count for each element in the gamma net
 		for (int i=0;i<restPoints.size();i++){
 			
@@ -435,18 +451,23 @@ public abstract class DataBase<T> {
 				}
 			}
 			
-			lableToCount = labelToCountArray.get(minDistanceFromGammaPointIndex);
+			if ( isLimitLabels == false || (isLimitLabels == true && countOfTotalLabels.get(minDistanceFromGammaPointIndex)<labelsToConsider)){		
+			
+				countOfTotalLabels.set(minDistanceFromGammaPointIndex, (countOfTotalLabels.get(minDistanceFromGammaPointIndex) + 1)); 
+				lableToCount = labelToCountArray.get(minDistanceFromGammaPointIndex);
 
-			if (lableToCount.containsKey(restLables.get(i))){
-				currCount = lableToCount.get(restLables.get(i));
-				if ( isLimitLabels == false || (isLimitLabels == true && currCount<labelsToConsider)){
+				if (lableToCount.containsKey(restLables.get(i))){
+					currCount = lableToCount.get(restLables.get(i));				
 					lableToCount.put(restLables.get(i) , ++currCount);
+											
 				}
-					
+				else{
+					lableToCount.put(restLables.get(i) , 1);
+				}				
 			}
-			else{
-				lableToCount.put(restLables.get(i) , 1);
-			}
+			
+		
+		
 		}		
 	
 		//assign majority label for each gamma net element

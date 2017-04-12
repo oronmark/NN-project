@@ -4,3 +4,4 @@
 4- in makeClassifier, claculate alpha ones in calcPenalty (may not be possible).
 5- add a new form of penalty and an optional user input to for picking the penalty (details in sivan's email).
 6- add casting to alpha calculation. (done)
+7- check case for 0 user input in comman.d line
