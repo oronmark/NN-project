@@ -43,7 +43,7 @@ public abstract class DataBase<T> {
 	double divisor;
 	boolean isLimitLabels = false;
 	int labelsToConsider = 0;
-	int penaltySize;
+	int penaltyType;
 	int diffLabelsInTrainingSet;
 	
 	
@@ -63,9 +63,9 @@ public abstract class DataBase<T> {
 		isUserScale = _isUserScale;
 		userScale = _userScale;
 		this.delta = _delta; 
-		penaltySize = _penaltyType;
-		diffLabelsInTrainingSet = calcDiffLabelCount();
+		penaltyType = _penaltyType;		
 		makeTrainingSet(trainingSetFilePath);	
+		diffLabelsInTrainingSet = calcDiffLabelCount();
 		shuffleTrainSet();
 		makeMetric(metricType);
 		makeClassifier();
@@ -143,24 +143,6 @@ public abstract class DataBase<T> {
 		}
 	return dataSetLabels;
 	}
-	
-	boolean stopScaleSearch(int trainingSetSize, int gammaNetSize,  double alpha, int diffLabels, double delta, double epsilon, double minPenalty, double currScale){
-		
-		double arg1 = alpha*epsilon;
-		double arg2 = (2/3)*(((gammaNetSize + 1)*Math.log(trainingSetSize*diffLabels)+Math.log(1/delta))/
-				(trainingSetSize-gammaNetSize));
-		double arg3 = Math.sqrt(9*(alpha*epsilon*((gammaNetSize + 1)*Math.log(trainingSetSize*diffLabels)+Math.log(1/delta))) /
-				(2*(trainingSetSize - gammaNetSize)));
-		double all = arg1+arg2+arg3;
-		
-
-		if (arg2>minPenalty){
-			return true;
-		}
-		
-		return false;
-	}
-	
 
 	
 	// will be used only on training set
@@ -200,10 +182,39 @@ public abstract class DataBase<T> {
 	}
 	
 	
-	double calcPenalty1( ){
+//	boolean stopScaleSearch(double minPenalty, double currScale){
+//		
+//		double alpha;
+//		double arg1;
+//		double arg2;
+//		double pen;
+//		double[] assignedPointsToTrainingSetByGammaNet = new double[sizeOfTrainingSet];
+//		double epsilon;
+//		
+//		if (sizeOfGammaNet == sizeOfTrainingSet)
+//			return true;
+//		
+//		assignedPointsToTrainingSetByGammaNet = classify(trainingSetPoints, sizeOfTrainingSet);
+//		epsilon = calcClassifierError(trainingSetLabels,assignedPointsToTrainingSetByGammaNet);		
+//		alpha = ((double)sizeOfTrainingSet)/(sizeOfTrainingSet-sizeOfGammaNet);
+//		
+//		arg1 = alpha * epsilon;
+//		arg2 = (((sizeOfGammaNet + 1)*Math.log(sizeOfTrainingSet*diffLabelsInTrainingSet) + Math.log(1/delta))/(sizeOfTrainingSet - sizeOfGammaNet));
+//		pen = arg1 + (2/3)*arg2 + (3/Math.sqrt(2))*Math.sqrt(arg1*arg2);
+//
+//		if (arg2>minPenalty){
+//			return true;
+//		}
+//		
+//		return false;
+//	}
+	
+	
+	double calcPenalty1(double currScale, double currMinPenalty){
 
  		/**
 		 * This method calculates the penalty of some scale (and the gamma net created using that scale) on the training sample
+		 * in case the stopping criteria is true (arg2>currMinPenalty) then the method return -1
 		 * @param trainingSetSize
 		 * @param gammaNetSize
 		 * @param alpha
@@ -230,9 +241,12 @@ public abstract class DataBase<T> {
 		arg2 = (((sizeOfGammaNet + 1)*Math.log(sizeOfTrainingSet*diffLabelsInTrainingSet) + Math.log(1/delta))/(sizeOfTrainingSet - sizeOfGammaNet));
 		pen = arg1 + (2/3)*arg2 + (3/Math.sqrt(2))*Math.sqrt(arg1*arg2);
 		
-        System.err.println("alpha = " + alpha + ", epsilon = " + epsilon + ", gammaNetSize = " + sizeOfGammaNet + ", "
+        System.err.println("currScale = " + currScale + " ,alpha = " + alpha + ", epsilon = " + epsilon + ", gammaNetSize = " + sizeOfGammaNet + ", "
         					+ "trainingSetSize = " + sizeOfTrainingSet + ", delta = " + delta + ", diffLabels = "+ diffLabelsInTrainingSet + ""
         							+ " arg1 = " + arg1 + ", arg2 = " + arg2 + ", pen = " + pen);
+        
+		if (arg2>currMinPenalty)
+			return -1;
         
 		return pen;
 	}
@@ -242,18 +256,28 @@ public abstract class DataBase<T> {
 		return 0;
 	}
 
-	double calcPenalty(){		
-		return calcPenalty1();
+	double calcPenalty(double currScale, double currMinPenalty){		
+		
+		double pen;		
+		switch (penaltyType){
+		
+		   case 1: pen = calcPenalty1(currScale, currMinPenalty);
+		   		   break;
+		   default : pen = calcPenalty2();
+		   		   break;
+		
+		}
+		
+		return pen;				
 	}
 		
 	
 	
-	//checks whether elem is a gammaNet element, if so, returns the index of this element in the structure gammaNetPoints otherwise returns -1
-	int checkIfGammaNetElem(T elem){
+	//checks whether element is a gammaNet element, if so, returns the index of this element in the structure gammaNetPoints otherwise returns -1
+	int checkIfGammaNetElem(T element){
 		for (int i = 0; i<gammaNetPoints.size(); i++){
-			if (elem == gammaNetPoints.get(i)){  //compares addresses 
+			if (element == gammaNetPoints.get(i))  //compares addresses 
 				return i;
-			}
 		}		
 		return -1;
 	}
@@ -261,15 +285,11 @@ public abstract class DataBase<T> {
 
 
 
-
-	
 	public void makeClassifier(){
-		int diffLabelCount = calcDiffLabelCount();
 		double maxDistance = getMaxDistance();
 		double currScale = maxDistance * 2;
 		double minPenalty = Double.MAX_VALUE;
 		double currPenalty;
-		double epsilon;
 		double[] assignedPointsToTrainingSetByGammaNet = new double[sizeOfTrainingSet];
 		double alpha;
 		int iter=0;
@@ -281,37 +301,22 @@ public abstract class DataBase<T> {
 			assignedPointsToTrainingSetByGammaNet = classify(trainingSetPoints, sizeOfTrainingSet);
 			errorOnTrainingSet = calcClassifierError(trainingSetLabels,assignedPointsToTrainingSetByGammaNet);
 			alpha = ((double)sizeOfTrainingSet)/(sizeOfTrainingSet-sizeOfGammaNet);
-			System.err.println("alpha = " + alpha+ " sizeOfTrainingSet = " + sizeOfTrainingSet + " sizeOfGammaNet = " + sizeOfGammaNet); 
-			minPenaltyForOptimalScale = calcPenalty();	
+		//	System.err.println("alpha = " + alpha+ " sizeOfTrainingSet = " + sizeOfTrainingSet + " sizeOfGammaNet = " + sizeOfGammaNet); 
+			minPenaltyForOptimalScale = calcPenalty(scale, minPenalty);	
 			return;
 		}
 		
-		System.out.println("Scale attempts-");
-		System.out.println("");
+		System.out.println("Scale attempts-\n");
+		
 		
 		scale = currScale;
 		while (sizeOfGammaNet != sizeOfTrainingSet ){
 		    
+			System.out.println(iter + ":");
 			makeGammaNet(currScale);							
-			assignedPointsToTrainingSetByGammaNet = classify(trainingSetPoints, sizeOfTrainingSet);
-			epsilon = calcClassifierError(trainingSetLabels,assignedPointsToTrainingSetByGammaNet);
-
-			
-			if (sizeOfGammaNet < sizeOfTrainingSet){
-				alpha = ((double)sizeOfTrainingSet)/(sizeOfTrainingSet-sizeOfGammaNet);
-				System.err.println("alpha = " + alpha+ " sizeOfTrainingSet = " + sizeOfTrainingSet + " sizeOfGammaNet = " + sizeOfGammaNet); 
-				//alpha = 1;
-				currPenalty = calcPenalty();
-				if (stopScaleSearch(sizeOfTrainingSet,sizeOfGammaNet,alpha,diffLabelCount,delta,epsilon, minPenalty, currScale)){
-					break;
-				}			
-			}
-			else{
-				currPenalty = Double.MAX_VALUE;
-			}
-			
-			
-
+			currPenalty = calcPenalty(currScale, minPenalty);
+			if (currPenalty == -1)
+				break;
 						
 			if (currPenalty < minPenalty){
 				minPenalty = currPenalty;
@@ -322,22 +327,21 @@ public abstract class DataBase<T> {
 			iter  += 1;
 			
 			
-			System.out.println(iter + ":");
+	//		System.out.println(iter + ":");
 	//		System.out.println("current scale, " + currScale);
 	//		System.out.println("error on training set , " + epsilon);
 	//		System.out.println("gamma net size , " + sizeOfGammaNet);
 	//		System.out.println("penalty for current scale , " + currPenalty + "\n");
 			
-			
-			
+						
 		}
 	
 		makeGammaNet(scale);
 		assignedPointsToTrainingSetByGammaNet = classify(trainingSetPoints, sizeOfTrainingSet);
 		errorOnTrainingSet = calcClassifierError(trainingSetLabels,assignedPointsToTrainingSetByGammaNet);
 		alpha = ((double)sizeOfTrainingSet)/(sizeOfTrainingSet-sizeOfGammaNet);
-		System.err.println("alpha = " + alpha+ " sizeOfTrainingSet = " + sizeOfTrainingSet + " sizeOfGammaNet = " + sizeOfGammaNet); 
-		minPenaltyForOptimalScale = calcPenalty();
+	//	System.err.println("alpha = " + alpha+ " sizeOfTrainingSet = " + sizeOfTrainingSet + " sizeOfGammaNet = " + sizeOfGammaNet); 
+		minPenaltyForOptimalScale = minPenalty;
 		
 		
 	}
@@ -368,11 +372,7 @@ public abstract class DataBase<T> {
 		return error;
 	}
 	
-	
-	
-	
 
-	
 	
 	double getMaxDistance(){
 		
