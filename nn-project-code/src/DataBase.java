@@ -44,6 +44,7 @@ public abstract class DataBase<T> {
 	boolean isLimitLabels = false;
 	int labelsToConsider = 0;
 	int penaltySize;
+	int diffLabelsInTrainingSet;
 	
 	
 	public DataBase (String trainingSetFilePath, String metricType, double _delta, boolean _isUserScale, double _userScale, double _divisor ,
@@ -63,6 +64,7 @@ public abstract class DataBase<T> {
 		userScale = _userScale;
 		this.delta = _delta; 
 		penaltySize = _penaltyType;
+		diffLabelsInTrainingSet = calcDiffLabelCount();
 		makeTrainingSet(trainingSetFilePath);	
 		shuffleTrainSet();
 		makeMetric(metricType);
@@ -159,136 +161,7 @@ public abstract class DataBase<T> {
 		return false;
 	}
 	
-	double calcPenalty(int trainingSetSize, int gammaNetSize,  double alpha, int diffLabels, double delta, double epsilon){
-		
-		/**
-		 * This method calculates the penalty of some scale (and the gamma net created using that scale) on the training sample
-		 * @param trainingSetSize
-		 * @param gammaNetSize
-		 * @param alpha
-		 * @param diffLabels : number of different labels in the training set
-		 * @param delta : trainingSetSize/(trainingSetSize - gammaNetSize)
-		 * @param epsilon : the error of the classifier (which is the gamma net) on the training set
-		 */
-		
-		
-		double arg1 = alpha * epsilon;
-		double arg2 = (((gammaNetSize + 1)*Math.log(trainingSetSize*diffLabels) + Math.log(1/delta))/(trainingSetSize - gammaNetSize));
-		double pen = arg1 + (2/3)*arg2 + (3/Math.sqrt(2))*Math.sqrt(arg1*arg2);
-		
-        System.err.println("alpha = " + alpha + ", epsilon = " + epsilon + ", gammaNetSize = " + gammaNetSize + ", "
-        					+ "trainingSetSize = " + trainingSetSize + ", delta = " + delta + ", diffLabels = "+ diffLabels + ""
-        							+ " arg1 = " + arg1 + ", arg2 = " + arg2 + ", pen = " + pen);
-        
-		return pen;
-	}
-	
-	
-	
-	public void makeClassifier(){
-		int diffLabelCount = calcDiffLabelCount();
-		double maxDistance = getMaxDistance();
-		double currScale = maxDistance * 2;
-		double minPenalty = Double.MAX_VALUE;
-		double currPenalty;
-		double epsilon;
-		double[] assignedPointsToTrainingSetByGammaNet = new double[sizeOfTrainingSet];
-		double alpha;
-		int iter=0;
-		
-		
-		if (isUserScale){
-			scale = userScale;
-			makeGammaNet(scale);
-			assignedPointsToTrainingSetByGammaNet = classify(trainingSetPoints, sizeOfTrainingSet);
-			errorOnTrainingSet = calcClassifierError(trainingSetLabels,assignedPointsToTrainingSetByGammaNet);
-			alpha = ((double)sizeOfTrainingSet)/(sizeOfTrainingSet-sizeOfGammaNet);
-			System.err.println("alpha = " + alpha+ " sizeOfTrainingSet = " + sizeOfTrainingSet + " sizeOfGammaNet = " + sizeOfGammaNet); 
-			minPenaltyForOptimalScale = calcPenalty(sizeOfTrainingSet,sizeOfGammaNet,alpha,diffLabelCount,delta,errorOnTrainingSet);	
-			return;
-		}
-		
-		System.out.println("Scale attempts-");
-		System.out.println("");
-		
-		scale = currScale;
-		while (sizeOfGammaNet != sizeOfTrainingSet ){
-		    
-			makeGammaNet(currScale);							
-			assignedPointsToTrainingSetByGammaNet = classify(trainingSetPoints, sizeOfTrainingSet);
-			epsilon = calcClassifierError(trainingSetLabels,assignedPointsToTrainingSetByGammaNet);
 
-			
-			if (sizeOfGammaNet < sizeOfTrainingSet){
-				alpha = ((double)sizeOfTrainingSet)/(sizeOfTrainingSet-sizeOfGammaNet);
-				System.err.println("alpha = " + alpha+ " sizeOfTrainingSet = " + sizeOfTrainingSet + " sizeOfGammaNet = " + sizeOfGammaNet); 
-				//alpha = 1;
-				currPenalty = calcPenalty(sizeOfTrainingSet,sizeOfGammaNet,alpha,diffLabelCount,delta,epsilon);
-				if (stopScaleSearch(sizeOfTrainingSet,sizeOfGammaNet,alpha,diffLabelCount,delta,epsilon, minPenalty, currScale)){
-					break;
-				}			
-			}
-			else{
-				currPenalty = Double.MAX_VALUE;
-			}
-			
-			
-
-						
-			if (currPenalty < minPenalty){
-				minPenalty = currPenalty;
-				scale = currScale;
-			}
-			
-			currScale /= divisor;
-			iter  += 1;
-			
-			
-			System.out.println(iter + ":");
-			System.out.println("current scale, " + currScale);
-			System.out.println("error on training set , " + epsilon);
-			System.out.println("gamma net size , " + sizeOfGammaNet);
-			System.out.println("penalty for current scale , " + currPenalty + "\n");
-			
-			
-			
-		}
-	
-		makeGammaNet(scale);
-		assignedPointsToTrainingSetByGammaNet = classify(trainingSetPoints, sizeOfTrainingSet);
-		errorOnTrainingSet = calcClassifierError(trainingSetLabels,assignedPointsToTrainingSetByGammaNet);
-		alpha = ((double)sizeOfTrainingSet)/(sizeOfTrainingSet-sizeOfGammaNet);
-		System.err.println("alpha = " + alpha+ " sizeOfTrainingSet = " + sizeOfTrainingSet + " sizeOfGammaNet = " + sizeOfGammaNet); 
-		minPenaltyForOptimalScale = calcPenalty(sizeOfTrainingSet,sizeOfGammaNet,alpha,diffLabelCount,delta,errorOnTrainingSet);
-		
-		
-	}
-	
-
-	double calcClassifierError(double[] originalLabels, double[] assignedLabels){
-		
-		/**
-		 * This method calculates the error of the classifier
-		 * @param  dataSetPoints : points that were labeled using the classifier (the gamma net)
-		 * @param originalLbels : the labels for each point in dataSetPoints such that the i'th label is the label of dataSetPoints[i]
-		 * (this labels are the true labels for each point, they are not calculated, rather they are given as user input
-		 * @param assignedLabels : the labels that were assigned by the classifier to the point in dataSetPoints.
-		 * the i'th label in assignedLabels is the calculated label for the point dataSetPoints[i]
-		 * @param size : number of points in dataSetPoints
-		 * @return double, the error of the labels in assignedLabels on the points in dataSetPoints
-		 * the formula for the error is - sum of I[originalLbels[i]!=assignedLabels[i]]\size, 0<=i<=size 
-		 */
-		int size = originalLabels.length;
-		double error = 0;
-		for (int i = 0; i < size; i++){
-			if (originalLabels[i] != assignedLabels[i]){
-				error++;
-			}			
-		}
-		error = error / size;
-		
-		return error;
-	}
 	
 	// will be used only on training set
 	// originalLabels = training set labels
@@ -320,27 +193,182 @@ public abstract class DataBase<T> {
 					error++;
 				}
 				
-			}
-			
-		}
-		
+			}			
+		}		
 		error = error / originalLabels.length;		
 		return error;
-
 	}
+	
+	
+	double calcPenalty1( ){
+
+ 		/**
+		 * This method calculates the penalty of some scale (and the gamma net created using that scale) on the training sample
+		 * @param trainingSetSize
+		 * @param gammaNetSize
+		 * @param alpha
+		 * @param diffLabels : number of different labels in the training set
+		 * @param delta : trainingSetSize/(trainingSetSize - gammaNetSize)
+		 * @param epsilon : the error of the classifier (which is the gamma net) on the training set
+		 */
+		
+		double alpha;
+		double arg1;
+		double arg2;
+		double pen;
+		double[] assignedPointsToTrainingSetByGammaNet = new double[sizeOfTrainingSet];
+		double epsilon;
+		
+		if (sizeOfGammaNet == sizeOfTrainingSet)
+			return Double.MAX_VALUE;
+		
+		assignedPointsToTrainingSetByGammaNet = classify(trainingSetPoints, sizeOfTrainingSet);
+		epsilon = calcClassifierError(trainingSetLabels,assignedPointsToTrainingSetByGammaNet);		
+		alpha = ((double)sizeOfTrainingSet)/(sizeOfTrainingSet-sizeOfGammaNet);
+		
+		arg1 = alpha * epsilon;
+		arg2 = (((sizeOfGammaNet + 1)*Math.log(sizeOfTrainingSet*diffLabelsInTrainingSet) + Math.log(1/delta))/(sizeOfTrainingSet - sizeOfGammaNet));
+		pen = arg1 + (2/3)*arg2 + (3/Math.sqrt(2))*Math.sqrt(arg1*arg2);
+		
+        System.err.println("alpha = " + alpha + ", epsilon = " + epsilon + ", gammaNetSize = " + sizeOfGammaNet + ", "
+        					+ "trainingSetSize = " + sizeOfTrainingSet + ", delta = " + delta + ", diffLabels = "+ diffLabelsInTrainingSet + ""
+        							+ " arg1 = " + arg1 + ", arg2 = " + arg2 + ", pen = " + pen);
+        
+		return pen;
+	}
+	
+	
+	double calcPenalty2(){		
+		return 0;
+	}
+
+	double calcPenalty(){		
+		return calcPenalty1();
+	}
+		
+	
 	
 	//checks whether elem is a gammaNet element, if so, returns the index of this element in the structure gammaNetPoints otherwise returns -1
 	int checkIfGammaNetElem(T elem){
-		
-
 		for (int i = 0; i<gammaNetPoints.size(); i++){
 			if (elem == gammaNetPoints.get(i)){  //compares addresses 
 				return i;
 			}
-		}
-		
+		}		
 		return -1;
 	}
+
+
+
+
+
+	
+	public void makeClassifier(){
+		int diffLabelCount = calcDiffLabelCount();
+		double maxDistance = getMaxDistance();
+		double currScale = maxDistance * 2;
+		double minPenalty = Double.MAX_VALUE;
+		double currPenalty;
+		double epsilon;
+		double[] assignedPointsToTrainingSetByGammaNet = new double[sizeOfTrainingSet];
+		double alpha;
+		int iter=0;
+		
+		
+		if (isUserScale){
+			scale = userScale;
+			makeGammaNet(scale);
+			assignedPointsToTrainingSetByGammaNet = classify(trainingSetPoints, sizeOfTrainingSet);
+			errorOnTrainingSet = calcClassifierError(trainingSetLabels,assignedPointsToTrainingSetByGammaNet);
+			alpha = ((double)sizeOfTrainingSet)/(sizeOfTrainingSet-sizeOfGammaNet);
+			System.err.println("alpha = " + alpha+ " sizeOfTrainingSet = " + sizeOfTrainingSet + " sizeOfGammaNet = " + sizeOfGammaNet); 
+			minPenaltyForOptimalScale = calcPenalty();	
+			return;
+		}
+		
+		System.out.println("Scale attempts-");
+		System.out.println("");
+		
+		scale = currScale;
+		while (sizeOfGammaNet != sizeOfTrainingSet ){
+		    
+			makeGammaNet(currScale);							
+			assignedPointsToTrainingSetByGammaNet = classify(trainingSetPoints, sizeOfTrainingSet);
+			epsilon = calcClassifierError(trainingSetLabels,assignedPointsToTrainingSetByGammaNet);
+
+			
+			if (sizeOfGammaNet < sizeOfTrainingSet){
+				alpha = ((double)sizeOfTrainingSet)/(sizeOfTrainingSet-sizeOfGammaNet);
+				System.err.println("alpha = " + alpha+ " sizeOfTrainingSet = " + sizeOfTrainingSet + " sizeOfGammaNet = " + sizeOfGammaNet); 
+				//alpha = 1;
+				currPenalty = calcPenalty();
+				if (stopScaleSearch(sizeOfTrainingSet,sizeOfGammaNet,alpha,diffLabelCount,delta,epsilon, minPenalty, currScale)){
+					break;
+				}			
+			}
+			else{
+				currPenalty = Double.MAX_VALUE;
+			}
+			
+			
+
+						
+			if (currPenalty < minPenalty){
+				minPenalty = currPenalty;
+				scale = currScale;
+			}
+			
+			currScale /= divisor;
+			iter  += 1;
+			
+			
+			System.out.println(iter + ":");
+	//		System.out.println("current scale, " + currScale);
+	//		System.out.println("error on training set , " + epsilon);
+	//		System.out.println("gamma net size , " + sizeOfGammaNet);
+	//		System.out.println("penalty for current scale , " + currPenalty + "\n");
+			
+			
+			
+		}
+	
+		makeGammaNet(scale);
+		assignedPointsToTrainingSetByGammaNet = classify(trainingSetPoints, sizeOfTrainingSet);
+		errorOnTrainingSet = calcClassifierError(trainingSetLabels,assignedPointsToTrainingSetByGammaNet);
+		alpha = ((double)sizeOfTrainingSet)/(sizeOfTrainingSet-sizeOfGammaNet);
+		System.err.println("alpha = " + alpha+ " sizeOfTrainingSet = " + sizeOfTrainingSet + " sizeOfGammaNet = " + sizeOfGammaNet); 
+		minPenaltyForOptimalScale = calcPenalty();
+		
+		
+	}
+	
+
+	double calcClassifierError(double[] originalLabels, double[] assignedLabels){
+		
+		/**
+		 * This method calculates the error of the classifier
+		 * @param  dataSetPoints : points that were labeled using the classifier (the gamma net)
+		 * @param originalLbels : the labels for each point in dataSetPoints such that the i'th label is the label of dataSetPoints[i]
+		 * (this labels are the true labels for each point, they are not calculated, rather they are given as user input
+		 * @param assignedLabels : the labels that were assigned by the classifier to the point in dataSetPoints.
+		 * the i'th label in assignedLabels is the calculated label for the point dataSetPoints[i]
+		 * @param size : number of points in dataSetPoints
+		 * @return double, the error of the labels in assignedLabels on the points in dataSetPoints
+		 * the formula for the error is - sum of I[originalLbels[i]!=assignedLabels[i]]\size, 0<=i<=size 
+		 */
+		int size = originalLabels.length;
+		double error = 0;
+		for (int i = 0; i < size; i++){
+			if (originalLabels[i] != assignedLabels[i]){
+				error++;
+			}			
+		}
+		error = error / size;
+		
+		return error;
+	}
+	
+	
 	
 	
 
@@ -363,12 +391,10 @@ public abstract class DataBase<T> {
 		return max;
 	}
 	
-	int calcDiffLabelCount(){
-		
+	int calcDiffLabelCount(){		
 		/**
 		 * @return int , number of different labels used to label the points in trainingSetPoints
-		 */
-		
+		 */		
 		Map<Double,Boolean> lableToCount = new HashMap<Double,Boolean>();
 		for (int i=0;i<sizeOfTrainingSet;i++){
 			double currLabel = trainingSetLabels[i];
