@@ -48,15 +48,14 @@ public abstract class DataBase<T> {
 	
 	
 	public DataBase (String trainingSetFilePath, String metricType, double _delta, boolean _isUserScale, double _userScale, double _divisor ,
-			         boolean _isLimitLabels, int _labelsToConsider, int _penaltyType) throws FileNotFoundException{
-		
-		   /**
-		   * This method is the constructor for dataBaseType1
-		   * @param trainingSetFilePath : The path to the input file with the training sample information
-		   * @param metricType : Metric type
-		   * @param format : The format of the input file
-		   * @param _delta : a Value between 0 and 1, this is a user input
-		   */
+			         boolean _isLimitLabels, int _labelsToConsider, int _penaltyType) throws FileNotFoundException{		
+	   /**
+	   * This method is the constructor for dataBase
+	   * @param trainingSetFilePath : The path to the input file with the training sample information
+	   * @param metricType : Metric type
+	   * @param format : The format of the input file
+	   * @param _delta : a Value between 0 and 1, this is a user input
+	   */
 		isLimitLabels = _isLimitLabels;
 		labelsToConsider = _labelsToConsider;
 		divisor = _divisor;
@@ -79,8 +78,7 @@ public abstract class DataBase<T> {
 	public int getTestSetSize(){
 		return sizeOfTestSet;
 	}
-	
-	
+		
 	public double getPenaltyOfOptimalScale(){
 		return minPenaltyForOptimalScale;
 	}
@@ -145,10 +143,15 @@ public abstract class DataBase<T> {
 	}
 
 	
-	// will be used only on training set
-	// originalLabels = training set labels
 	double calcClassifierLooError(double[] originalLabels, double[] assignedLabels){
 		
+ 		/**
+		 * This method calculates the looError of the current classifier (current gamma net) on the classified training set points.
+		 * @param originalLabels, the original labels for the classified data set (in this case the data set is always trainingSetPoints),
+		 * meaning originalLabels is always trainingSetLabels.
+		 * @param originalLabels, the assigned labels for trainingSetPoints.
+		 */
+
 		double dis;
 		int closestGammaPointIndex;
 		double error = 0;
@@ -164,8 +167,8 @@ public abstract class DataBase<T> {
 				dis = metric.calcDistance(gammaNetPoints.get(indexInGammaNet), gammaNetPoints.get(0));
 				closestGammaPointIndex = 0;
 				for (int j = 0 ; j<gammaNetPoints.size() ; j++){
-					if (metric.calcDistance(gammaNetPoints.get(indexInGammaNet), gammaNetPoints.get(i))<dis){
-						dis = metric.calcDistance(gammaNetPoints.get(indexInGammaNet), gammaNetPoints.get(i));
+					if (metric.calcDistance(gammaNetPoints.get(indexInGammaNet), gammaNetPoints.get(j))<dis){
+						dis = metric.calcDistance(gammaNetPoints.get(indexInGammaNet), gammaNetPoints.get(j));
 						closestGammaPointIndex = j;
 					}
 				}
@@ -173,8 +176,7 @@ public abstract class DataBase<T> {
 				
 				if (assignedLabels[i] != gammaNetLabels[closestGammaPointIndex]){
 					error++;
-				}
-				
+				}				
 			}			
 		}		
 		error = error / originalLabels.length;		
@@ -182,45 +184,13 @@ public abstract class DataBase<T> {
 	}
 	
 	
-//	boolean stopScaleSearch(double minPenalty, double currScale){
-//		
-//		double alpha;
-//		double arg1;
-//		double arg2;
-//		double pen;
-//		double[] assignedPointsToTrainingSetByGammaNet = new double[sizeOfTrainingSet];
-//		double epsilon;
-//		
-//		if (sizeOfGammaNet == sizeOfTrainingSet)
-//			return true;
-//		
-//		assignedPointsToTrainingSetByGammaNet = classify(trainingSetPoints, sizeOfTrainingSet);
-//		epsilon = calcClassifierError(trainingSetLabels,assignedPointsToTrainingSetByGammaNet);		
-//		alpha = ((double)sizeOfTrainingSet)/(sizeOfTrainingSet-sizeOfGammaNet);
-//		
-//		arg1 = alpha * epsilon;
-//		arg2 = (((sizeOfGammaNet + 1)*Math.log(sizeOfTrainingSet*diffLabelsInTrainingSet) + Math.log(1/delta))/(sizeOfTrainingSet - sizeOfGammaNet));
-//		pen = arg1 + (2/3)*arg2 + (3/Math.sqrt(2))*Math.sqrt(arg1*arg2);
-//
-//		if (arg2>minPenalty){
-//			return true;
-//		}
-//		
-//		return false;
-//	}
-	
-	
 	double calcPenalty1(double currScale, double currMinPenalty){
 
  		/**
-		 * This method calculates the penalty of some scale (and the gamma net created using that scale) on the training sample
-		 * in case the stopping criteria is true (arg2>currMinPenalty) then the method return -1
-		 * @param trainingSetSize
-		 * @param gammaNetSize
-		 * @param alpha
-		 * @param diffLabels : number of different labels in the training set
-		 * @param delta : trainingSetSize/(trainingSetSize - gammaNetSize)
-		 * @param epsilon : the error of the classifier (which is the gamma net) on the training set
+		 * This method calculates the penalty (type 1) of some scale (and the gamma net created using that scale).
+		 * @param currScale, the scale being tested in makeClassifier, (not necessarily the optimal).
+		 * @param currMinPenalty, the lowest penalty found for the current iteration of makeClassifier.
+		 * the scale used to achieve this penalty is the class member scale.  
 		 */
 		
 		double alpha;
@@ -243,7 +213,15 @@ public abstract class DataBase<T> {
 		
         System.err.println("currScale = " + currScale + " ,alpha = " + alpha + ", epsilon = " + epsilon + ", gammaNetSize = " + sizeOfGammaNet + ", "
         					+ "trainingSetSize = " + sizeOfTrainingSet + ", delta = " + delta + ", diffLabels = "+ diffLabelsInTrainingSet + ""
-        							+ " arg1 = " + arg1 + ", arg2 = " + arg2 + ", pen = " + pen);
+        							+ " arg1 = " + arg1 + ", arg2 = " + arg2 + ", pen = " + pen + "\n");
+        
+    	System.out.println("current scale, " + currScale);
+    	System.out.println("error on training set , " + epsilon);
+    	System.out.println("gamma net size , " + sizeOfGammaNet);
+    	System.out.println("training set size , " + sizeOfTrainingSet);
+    	System.out.println("alpha , " + alpha);
+    	System.out.println("penalty for current scale , " + pen + "\n");
+        
         
 		if (arg2>currMinPenalty)
 			return -1;
@@ -252,29 +230,60 @@ public abstract class DataBase<T> {
 	}
 	
 	
-	double calcPenalty2(){		
-		return 0;
-	}
-
-	double calcPenalty(double currScale, double currMinPenalty){		
+	double calcPenalty2(double currScale){	
 		
+ 		/**
+		 * This method calculates the penalty (type 2) of some scale (and the gamma net created using that scale).
+		 * @param currScale, the scale what was used to make the current gamma net.
+		 */
+	
+		double[] assignedPointsToTrainingSetByGammaNet = new double[sizeOfTrainingSet];
+		double looError;
+		
+		assignedPointsToTrainingSetByGammaNet = classify(trainingSetPoints, sizeOfTrainingSet);
+		looError = calcClassifierLooError(trainingSetLabels, assignedPointsToTrainingSetByGammaNet);
+		
+        System.err.println("currScale = " + currScale + ", gammaNetSize = " + sizeOfGammaNet + ", "
+				+ "trainingSetSize = " + sizeOfTrainingSet + ", looError = " + looError + "\n");
+        
+    	System.out.println("current scale, " + currScale);
+    	System.out.println("error on training set (looError) , " + looError);
+    	System.out.println("gamma net size , " + sizeOfGammaNet);
+    	System.out.println("training set size , " + sizeOfTrainingSet);
+    	System.out.println("penalty for current scale , " + looError + "\n");
+
+				
+		return looError;
+	}
+	
+
+	double calcPenalty(double currScale, double currMinPenalty){				
+ 		/**
+		 * This method calculates the penalty of some scale (and the gamma net created using that scale) on the training set.
+		 * the penalty type is according to the class member penaltyType.
+		 * @param currScale, the scale being tested in makeClassifier, (not necessarily the optimal).
+		 * @param currMinPenalty, the lowest penalty found for the current iteration of makeClassifier.
+		 * the scale used to achieve this penalty is the class member scale.  
+		 */
+
+				
 		double pen;		
 		switch (penaltyType){
 		
 		   case 1: pen = calcPenalty1(currScale, currMinPenalty);
 		   		   break;
-		   default : pen = calcPenalty2();
-		   		   break;
-		
-		}
-		
+		   default : pen = calcPenalty2(currScale);
+		   		   break;		
+		}		
 		return pen;				
 	}
 		
 	
 	
-	//checks whether element is a gammaNet element, if so, returns the index of this element in the structure gammaNetPoints otherwise returns -1
 	int checkIfGammaNetElem(T element){
+ 		/**
+		 * This method checks whether element is one of the elements in the currnent gammaNet. 
+		 */
 		for (int i = 0; i<gammaNetPoints.size(); i++){
 			if (element == gammaNetPoints.get(i))  //compares addresses 
 				return i;

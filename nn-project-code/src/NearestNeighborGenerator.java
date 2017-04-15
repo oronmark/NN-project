@@ -95,7 +95,7 @@ public class NearestNeighborGenerator {
 			if (args[i].equals("-p")){
 				try{
 					penaltyType = Integer.parseInt(args[i+1]);
-					if (penaltyType<penaltyOptions || penaltyType>penaltyOptions){
+					if (penaltyType>penaltyOptions || penaltyType>penaltyOptions){
 						System.out.println("Error: The penalty type you entered does not exist");
 						return;
 					}
