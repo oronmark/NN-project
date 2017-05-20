@@ -143,46 +143,6 @@ public abstract class DataBase<T> {
 	}
 
 	
-	double calcClassifierLooError(double[] originalLabels, double[] assignedLabels){
-		
- 		/**
-		 * This method calculates the looError of the current classifier (current gamma net) on the classified training set points.
-		 * @param originalLabels, the original labels for the classified data set (in this case the data set is always trainingSetPoints),
-		 * meaning originalLabels is always trainingSetLabels.
-		 * @param originalLabels, the assigned labels for trainingSetPoints.
-		 */
-
-		double dis;
-		int closestGammaPointIndex;
-		double error = 0;
-		int indexInGammaNet;
-		for (int i = 0; i < trainingSetPoints.length; i++){
-			if (((indexInGammaNet=checkIfGammaNetElem(trainingSetPoints[i])) == -1) || cellSize[indexInGammaNet] == 1){
-				if (originalLabels[i] != assignedLabels[i]){
-					error++;
-				}
-			}
-			else{ //special case for gamma net points with cellSize = 1
-				
-				dis = metric.calcDistance(gammaNetPoints.get(indexInGammaNet), gammaNetPoints.get(0));
-				closestGammaPointIndex = 0;
-				for (int j = 0 ; j<gammaNetPoints.size() ; j++){
-					if (metric.calcDistance(gammaNetPoints.get(indexInGammaNet), gammaNetPoints.get(j))<dis){
-						dis = metric.calcDistance(gammaNetPoints.get(indexInGammaNet), gammaNetPoints.get(j));
-						closestGammaPointIndex = j;
-					}
-				}
-				
-				
-				if (assignedLabels[i] != gammaNetLabels[closestGammaPointIndex]){
-					error++;
-				}				
-			}			
-		}		
-		error = error / originalLabels.length;		
-		return error;
-	}
-	
 	
 	double calcPenalty1(double currScale, double currMinPenalty){
 
@@ -228,6 +188,56 @@ public abstract class DataBase<T> {
         
 		return pen;
 	}
+	
+	double calcClassifierLooError(double[] originalLabels, double[] assignedLabels){
+		
+ 		/**
+		 * This method calculates the looError of the current classifier (current gamma net) on the classified training set points.
+		 * @param originalLabels, the original labels for the classified data set (in this case the data set is always trainingSetPoints),
+		 * meaning originalLabels is always trainingSetLabels.
+		 * @param assignedLabels, the assigned labels for trainingSetPoints.
+		 */
+
+		double dis;
+		int closestGammaPointIndex;
+		double error = 0;
+		int indexInGammaNet;
+		
+		if (sizeOfGammaNet == sizeOfTrainingSet){
+			return Double.MAX_VALUE;
+		}
+		
+		
+		for (int i = 0; i < trainingSetPoints.length; i++){
+			if (((indexInGammaNet=checkIfGammaNetElem(trainingSetPoints[i])) == -1) || cellSize[indexInGammaNet] > 1){
+				if (originalLabels[i] != assignedLabels[i]){
+					error++;
+				}
+			}
+			else{ //special case for gamma net points with cellSize = 1
+				
+				dis = Double.MAX_VALUE;
+				closestGammaPointIndex = i;
+				
+				for (int j = 0 ; j<gammaNetPoints.size() ; j++){  // iterate other gamma net elements and find the closest element with cellSize > 1
+					if (gammaNetPoints.get(indexInGammaNet) !=  gammaNetPoints.get(j) &&
+						cellSize[j] > 1 &&
+						metric.calcDistance(gammaNetPoints.get(indexInGammaNet), gammaNetPoints.get(j))<dis){
+						dis = metric.calcDistance(gammaNetPoints.get(indexInGammaNet), gammaNetPoints.get(j));
+						closestGammaPointIndex = j;
+					}
+				}
+				
+				
+				if (assignedLabels[i] != gammaNetLabels[closestGammaPointIndex]){
+					error++;
+				}				
+			}			
+		}		
+		error = error / originalLabels.length;		
+		return error;
+	}
+	
 	
 	
 	double calcPenalty2(double currScale){	
@@ -334,14 +344,6 @@ public abstract class DataBase<T> {
 			
 			currScale /= divisor;
 			iter  += 1;
-			
-			
-	//		System.out.println(iter + ":");
-	//		System.out.println("current scale, " + currScale);
-	//		System.out.println("error on training set , " + epsilon);
-	//		System.out.println("gamma net size , " + sizeOfGammaNet);
-	//		System.out.println("penalty for current scale , " + currPenalty + "\n");
-			
 						
 		}
 	

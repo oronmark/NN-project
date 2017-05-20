@@ -43,7 +43,7 @@ public class NearestNeighborGenerator {
 		boolean isLimitLabels = false;
 		int penaltyType = 1;
 		int penaltyOptions = 2;
-		
+	
 		if (args.length<5){
 			
 			System.out.println("Error: incorrect number of mandatory arguments");
