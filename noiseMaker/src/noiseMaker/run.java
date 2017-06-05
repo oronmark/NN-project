@@ -9,36 +9,31 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.Scanner;
 
 
 public class run {
-
-	
 	public static void main(String[] args) {
 		
 		/**
 		 * args[0] : <full-file-name> : file name and path to reduce
-		 * args[1] : -n <number> : number of items to keep, default - keeps all items
-		 * args[2] : -o <file-name> : output file name , default - out.csv
+		 * args[1] : -o <file-name> : output file name , default - out.csv
+		 * args[2] : -p <percent-to-change> : the percent of the labels to change, default 5
 		 * no order of optional arguments required
 		 */
 		
 		int changeLabelAmount;
 		double per = 5;
 		String inputFilePath = args[0];
-		int numberOfItems = -1;
 		String outputFilePath = null;
 		int lineNumber = 0;
 		List<String> lines = new ArrayList<String>();
 		List<String> newLines = new ArrayList<String>();
 		Random random = new Random();
 	
-		
 		for (int i=1; i<args.length;i++){
 			
-			if (args[i].equals("-n")){
-				numberOfItems = Integer.parseInt(args[i+1]);
+			if (args[i].equals("-p")){
+				per = Double.parseDouble(args[i+1]);
 			}
 			if (args[i].equals("-o")){
 				outputFilePath = args[i+1];
@@ -48,17 +43,15 @@ public class run {
 		if (outputFilePath == null){
 			outputFilePath = "out.csv";
 		}
-		
-		if (numberOfItems == 0){
-			System.out.println("Number of items requested is 0, aborting.");
+		 System.out.println("per: " + per);
+		if (per <= 0){
+			System.out.println("the percent must be a positive number");
 			return;
 		}
-		
 		
 		 FileReader fileReader;
 		try {
 			 fileReader = new FileReader(inputFilePath);
-			
 			 BufferedReader br = new BufferedReader(fileReader);
 			 String line = null;
 			 while ((line = br.readLine()) != null) {
@@ -67,13 +60,8 @@ public class run {
 			 }
 			 
 			 br.close();
-			 
-			 changeLabelAmount = (int) ((double)(lineNumber + 1) * per)/100;
-			 
-			 if (numberOfItems>lineNumber){
-				 numberOfItems = lineNumber;
-			 }
-			 
+			 // each line is an item
+			 changeLabelAmount = Math.max(1, (int) ((double)(lineNumber) * per)/100);
 		} catch (FileNotFoundException e) {
 			System.out.println("Error: Invalid input file- " + inputFilePath);
 			return;	
@@ -82,7 +70,6 @@ public class run {
 			return;	
 		}
 
-		
 		//change tag for <changeLabelAmount> points and add to ouput array
 		String currLine;
 		String newLine;
@@ -97,23 +84,19 @@ public class run {
 			newLines.add(newLine);
 			changeLabelAmount--;
 		}	
-		
 	
 		while (lines.size() != 0){
 			currLine = (lines.get(0)); 
 			newLines.add(lines.get(0));
 			lines.remove(0);
 		}
-		
 				
 		FileWriter fw = null;
 		BufferedWriter bw = null;
 				
-
 			try {
 				fw = new FileWriter(outputFilePath);
-				bw = new BufferedWriter(fw);
-				
+				bw = new BufferedWriter(fw);	
 				for (int i = 0; i < newLines.size(); i++){
 					bw.write(newLines.get(i));
 					bw.write("\n");
