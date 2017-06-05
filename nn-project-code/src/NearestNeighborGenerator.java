@@ -137,6 +137,7 @@ public class NearestNeighborGenerator {
 		
 		DataBase db = makeDataBase(trainingSetFilePath, isUserScale, userScale, map, dataType, metricType, delta, divisor,
 									isLimitLabels, labelsToConsider, penaltyType);
+	
 		if (db == null){
 			return;
 		}

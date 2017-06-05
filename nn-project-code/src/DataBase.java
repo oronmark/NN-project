@@ -56,6 +56,8 @@ public abstract class DataBase<T> {
 	   * @param format : The format of the input file
 	   * @param _delta : a Value between 0 and 1, this is a user input
 	   */
+		
+		
 		isLimitLabels = _isLimitLabels;
 		labelsToConsider = _labelsToConsider;
 		divisor = _divisor;
@@ -63,12 +65,20 @@ public abstract class DataBase<T> {
 		userScale = _userScale;
 		this.delta = _delta; 
 		penaltyType = _penaltyType;		
-		makeTrainingSet(trainingSetFilePath);	
+		makeTrainingSet(trainingSetFilePath);		
 		diffLabelsInTrainingSet = calcDiffLabelCount();
 		shuffleTrainSet();
+		System.out.println(diffLabelsInTrainingSet);
+		System.out.println(Arrays.toString(trainingSetLabels));
+
 		makeMetric(metricType);
 		makeClassifier();
-
+		
+//		for (int i=0; i< getGammaNetSize() ; i++){
+//			System.out.print(Arrays.toString((double[]) gammaNetPoints.get(i)) + "\n");
+//			System.out.print(gammaNetLabels[i] + "\n");
+//		}
+//		System.out.println();
 	}
 	
 	public int getTrainingSetSize(){
@@ -203,9 +213,9 @@ public abstract class DataBase<T> {
 		double error = 0;
 		int indexInGammaNet;
 		
-		if (sizeOfGammaNet == sizeOfTrainingSet){
-			return Double.MAX_VALUE;
-		}
+//		if (sizeOfGammaNet == sizeOfTrainingSet){
+//			return Double.MAX_VALUE;
+//		}
 		
 		
 		for (int i = 0; i < trainingSetPoints.length; i++){
@@ -220,8 +230,8 @@ public abstract class DataBase<T> {
 				closestGammaPointIndex = i;
 				
 				for (int j = 0 ; j<gammaNetPoints.size() ; j++){  // iterate other gamma net elements and find the closest element with cellSize > 1
-					if (gammaNetPoints.get(indexInGammaNet) !=  gammaNetPoints.get(j) &&
-						cellSize[j] > 1 &&
+					if (gammaNetPoints.get(indexInGammaNet) !=  gammaNetPoints.get(j) /*&&
+						cellSize[j] > 1*/ &&
 						metric.calcDistance(gammaNetPoints.get(indexInGammaNet), gammaNetPoints.get(j))<dis){
 						dis = metric.calcDistance(gammaNetPoints.get(indexInGammaNet), gammaNetPoints.get(j));
 						closestGammaPointIndex = j;
@@ -253,8 +263,8 @@ public abstract class DataBase<T> {
 		assignedPointsToTrainingSetByGammaNet = classify(trainingSetPoints, sizeOfTrainingSet);
 		looError = calcClassifierLooError(trainingSetLabels, assignedPointsToTrainingSetByGammaNet);
 		
-        System.err.println("currScale = " + currScale + ", gammaNetSize = " + sizeOfGammaNet + ", "
-				+ "trainingSetSize = " + sizeOfTrainingSet + ", looError = " + looError + "\n");
+//        System.err.println("currScale = " + currScale + ", gammaNetSize = " + sizeOfGammaNet + ", "
+//				+ "trainingSetSize = " + sizeOfTrainingSet + ", looError = " + looError + "\n");
         
     	System.out.println("current scale, " + currScale);
     	System.out.println("error on training set (looError) , " + looError);
@@ -657,6 +667,7 @@ public void printAllDistances(){
 	for (int i=0; i<sizeOfTrainingSet;i++){
 		for (int j=0; j<sizeOfTrainingSet;j++){
 			System.out.print(i + " to " + j + ": ");
+			//System.out.print(Arrays.toString((double[]) trainingSetPoints[i]));
 			System.out.println(metric.calcDistance(trainingSetPoints[i], trainingSetPoints[j]));
 						
 		}
